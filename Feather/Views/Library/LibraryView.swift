@@ -12,16 +12,15 @@ import NimbleViews
 // MARK: - View
 struct LibraryView: View {
 	@StateObject var downloadManager = DownloadManager.shared
-	@StateObject var updateManager = UpdateManager.shared
 	
 	@State private var _selectedInfoAppPresenting: AnyApp?
 	@State private var _selectedSigningAppPresenting: AnyApp?
 	@State private var _selectedInstallAppPresenting: AnyApp?
 	@State private var _isImportingPresenting = false
+	@State private var _isSettingsPresenting = false
+	@Environment(\.layoutDirection) private var _layoutDirection
 	@State private var _isDownloadingPresenting = false
 	@State private var _alertDownloadString: String = "" // for _isDownloadingPresenting
-	@State private var _updateCheckRotation = 0.0
-	@State private var _isUpdateCheckCompleteVisible = false
 	
 	// MARK: Selection State
 	@State private var _selectedAppUUIDs: Set<String> = []
@@ -32,6 +31,11 @@ struct LibraryView: View {
 	
 	
 	@Namespace private var _namespace
+	
+	/// Physical top-left corner in both LTR and RTL (Arabic) layouts.
+	private var _settingsPlacement: ToolbarItemPlacement {
+		_layoutDirection == .rightToLeft ? .topBarTrailing : .topBarLeading
+	}
 	
 	// horror
 	private func filteredAndSortedApps<T>(from apps: FetchedResults<T>) -> [T] where T: NSManagedObject {
@@ -61,12 +65,6 @@ struct LibraryView: View {
 		sortDescriptors: [NSSortDescriptor(keyPath: \Imported.date, ascending: false)],
 		animation: .snappy
 	) private var _importedApps: FetchedResults<Imported>
-	
-	@FetchRequest(
-		entity: AltSource.entity(),
-		sortDescriptors: [NSSortDescriptor(keyPath: \AltSource.name, ascending: true)],
-		animation: .snappy
-	) private var _sources: FetchedResults<AltSource>
 	
 	// MARK: Body
 	var body: some View {
@@ -142,6 +140,16 @@ struct LibraryView: View {
 				}
 			}
 			.toolbar {
+				if !_editMode.isEditing {
+					ToolbarItem(placement: _settingsPlacement) {
+						Button {
+							_isSettingsPresenting = true
+						} label: {
+							Image(systemName: "gearshape.2")
+						}
+					}
+				}
+				
 				ToolbarItem(placement: .topBarLeading) {
 					EditButton()
 				}
@@ -155,25 +163,6 @@ struct LibraryView: View {
 						_bulkDeleteSelectedApps()
 					}
 				} else {
-					ToolbarItem(placement: .topBarTrailing) {
-						Button {
-							Task {
-								await _checkForUpdates()
-							}
-						} label: {
-							Image(systemName: _isUpdateCheckCompleteVisible ? "checkmark.circle.fill" : "arrow.triangle.2.circlepath")
-								.rotationEffect(.degrees(_updateCheckRotation))
-								.animation(
-									updateManager.isChecking
-										? .linear(duration: 0.8).repeatForever(autoreverses: false)
-										: .default,
-									value: _updateCheckRotation
-								)
-						}
-						.disabled(updateManager.isChecking)
-						.accessibilityLabel(.localized("Check for Updates"))
-					}
-					
 					NBToolbarMenu(
 						systemImage: "plus",
 						style: .icon,
@@ -184,6 +173,9 @@ struct LibraryView: View {
 				}
 			}
 			.environment(\.editMode, $_editMode)
+			.sheet(isPresented: $_isSettingsPresenting) {
+				SettingsView()
+			}
 			.sheet(item: $_selectedInfoAppPresenting) { app in
 				LibraryInfoView(app: app.base)
 			}
@@ -234,9 +226,6 @@ struct LibraryView: View {
 					_selectedAppUUIDs.removeAll()
 				}
 			}
-			.onChange(of: updateManager.isChecking) { isChecking in
-				_handleUpdateCheckStateChange(isChecking)
-			}
 		}
 	}
 }
@@ -283,36 +272,6 @@ extension LibraryView {
 		}
 		
 		return allApps
-	}
-	
-	private func _checkForUpdates() async {
-		let localApps = _signedApps.map { $0 as AppInfoPresentable } + _importedApps.map { $0 as AppInfoPresentable }
-		await updateManager.checkForUpdates(
-			sources: Array(_sources),
-			localApps: localApps
-		)
-	}
-	
-	private func _handleUpdateCheckStateChange(_ isChecking: Bool) {
-		if isChecking {
-			_isUpdateCheckCompleteVisible = false
-			_updateCheckRotation = 0
-			withAnimation(.linear(duration: 0.8).repeatForever(autoreverses: false)) {
-				_updateCheckRotation = 360
-			}
-		} else {
-			withAnimation(.none) {
-				_updateCheckRotation = 0
-			}
-			
-			_isUpdateCheckCompleteVisible = true
-			Task { @MainActor in
-				try? await Task.sleep(nanoseconds: 900_000_000)
-				if !updateManager.isChecking {
-					_isUpdateCheckCompleteVisible = false
-				}
-			}
-		}
 	}
 }
 
