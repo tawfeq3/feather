@@ -16,26 +16,16 @@
 			Section {
 				VStack(spacing: 14) {
 					_title()
-					_benefit(
-						.localized("Remove this Alert"),
-						.localized("Remove annoying alerts like these after getting beta access!"),
-						systemName: "heart.text.square.fill"
-					)
-					_benefit(
-						.localized("Exclusive Features"),
-						.localized("After gaining beta access, you're able to use exclusive features that may not be present on releases!"),
-						systemName: "timer"
-					)
-					_benefit(
-						.localized("Show Your Support"),
-						.localized("Show your support by donating! If you're unable to donate, spreading the word works too!"),
-						systemName: "heart.fill"
-					)
+					Text(verbatim: "للأدوات المتفرقة")
+						.font(.body)
+						.foregroundStyle(.secondary)
+						.multilineTextAlignment(.center)
+						.frame(maxWidth: .infinity)
 				
 					Button() {
 						UIApplication.open(site)
 					} label: {
-						_sheetButton(.localized("Donate"))
+						_sheetButton("تواصل")
 					}
 					.frame(height: 45)
 				}
@@ -47,11 +37,11 @@
 		@ViewBuilder
 		private func _title() -> some View {
 			VStack(alignment: .center, spacing: 12) {
-				Image(systemName: "heart")
+				Image(systemName: "bag.fill")
 					.font(.system(size: 38, weight: .bold))
-					.foregroundStyle(.pink)
+					.foregroundStyle(.tint)
 			
-				Text(.localized("Donations"))
+				Text(verbatim: "متجر Plus")
 					.font(.title)
 					.bold()
 			}
