@@ -284,46 +284,8 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 	}
 	
 	func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
-		let entry: SourceAppEntry
-		switch sortOption {
-		case .default: entry = _sortedApps[indexPath.row]
-		case .name: entry = _groupedAppsByNameFirstLetter[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
-		case .date: entry = _groupedAppsByDate[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
-		}
-		
-		return UIContextMenuConfiguration(
-			identifier: nil,
-			previewProvider: nil
-		) { _ in
-			let versionsMenu = UIMenu(
-				title: .localized("Copy Download URLs"),
-				image: UIImage(systemName: "list.bullet"),
-				children: self._contextActions(for: entry.app, with: { _, url in
-					UIPasteboard.general.string = url?.absoluteString
-				}, image: UIImage(systemName: "doc.on.clipboard"))
-			)
-			
-			let downloadsMenu = UIMenu(
-				title: .localized("Previous Versions"),
-				image: UIImage(systemName: "square.and.arrow.down.on.square"),
-				children: self._contextActions(for: entry.app, with: { version, url in
-					if let url {
-						_ = DownloadManager.shared.startDownload(
-							from: url,
-							id: entry.app.currentUniqueId,
-							sourceProvenance: SourceAppProvenance(
-								sourceURL: entry.sourceURL,
-								repository: entry.source,
-								app: entry.app,
-								version: version
-							)
-						)
-					}
-				}, image: UIImage(systemName: "arrow.down"))
-			)
-			
-			return UIMenu(children: [downloadsMenu, versionsMenu])
-		}
+		// Modified: long-press menu (Previous Versions / Copy Download URLs) disabled.
+		nil
 	}
 	
 	// MARK: Actions
