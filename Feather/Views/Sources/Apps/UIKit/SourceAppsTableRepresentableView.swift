@@ -10,7 +10,7 @@ import AltSourceKit
 
 // MARK: - Representable
 struct SourceAppsTableRepresentableView: UIViewRepresentable {
-	var sourceContexts: [SourceAppsView.SourceRepositoryContext]
+	var sources: [ASRepository]
 	@Binding var searchText: String
 	@Binding var sortOption: SourceAppsView.SortOption
 	@Binding var sortAscending: Bool
@@ -30,9 +30,9 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 		}
 		
 		if
-			let firstSource = sourceContexts.first,
-			sourceContexts.count == 1,
-			let news = firstSource.repository.news,
+			let firstSource = sources.first,
+			sources.count == 1,
+			let news = firstSource.news,
 			!news.isEmpty
 		{
 			let header = UIHostingController(rootView: SourceNewsView(news: news))
@@ -59,12 +59,12 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 	func updateUIView(_ tableView: UITableView, context: Context) {
 		context.coordinator.uiTableView = tableView
 		
-		let sourcesChanged = context.coordinator.sourceContexts != sourceContexts
+		let sourcesChanged = context.coordinator.sources != sources
 		let searchChanged = context.coordinator.searchText != searchText
 		let sortOptionChanged = context.coordinator.sortOption != sortOption
 		let sortDirectionChanged = context.coordinator.sortAscending != sortAscending
 		
-		context.coordinator.sourceContexts = sourceContexts
+		context.coordinator.sources = sources
 		context.coordinator.searchText = searchText
 		context.coordinator.sortOption = sortOption
 		context.coordinator.sortAscending = sortAscending
@@ -76,7 +76,7 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 	
 	func makeCoordinator() -> Coordinator {
 		Coordinator(
-			sourceContexts: sourceContexts,
+			sources: sources,
 			searchText: searchText,
 			sortOption: sortOption,
 			sortAscending: sortAscending,
@@ -87,32 +87,24 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 
 // MARK: - Representable Extension: Coordinator
 extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITableViewDataSource, UITableViewDelegate {
-	var sourceContexts: [SourceAppsView.SourceRepositoryContext]
+	var sources: [ASRepository]
 	var searchText: String
 	var sortOption: SourceAppsView.SortOption
 	var sortAscending: Bool
 	let onSelect: (SourceAppsView.SourceAppRoute) -> Void
 	
-	private var _groupedAppsByNameFirstLetter: [String: [SourceAppEntry]] = [:]
-	private var _groupedAppsByDate: [String: [SourceAppEntry]] = [:]
+	private var _groupedAppsByNameFirstLetter: [String: [(source: ASRepository, app: ASRepository.App)]] = [:]
+	private var _groupedAppsByDate: [String: [(source: ASRepository, app: ASRepository.App)]] = [:]
 	private var _sortedSectionTitles: [String] = []
 	
-	private var _cachedSortedApps: [SourceAppEntry] = []
+	private var _cachedSortedApps: [(source: ASRepository, app: ASRepository.App)] = []
 	weak var uiTableView: UITableView?
 	
-	private var _allAppsWithSource: [SourceAppEntry] {
-		sourceContexts.flatMap { context in
-			context.repository.apps.map {
-				SourceAppEntry(
-					sourceURL: context.sourceURL,
-					source: context.repository,
-					app: $0
-				)
-			}
-		}
+	private var _allAppsWithSource: [(source: ASRepository, app: ASRepository.App)] {
+		sources.flatMap { source in source.apps.map { (source: source, app: $0) } }
 	}
 	
-	private var _sortedApps: [SourceAppEntry] {
+	private var _sortedApps: [(source: ASRepository, app: ASRepository.App)] {
 		if !_cachedSortedApps.isEmpty {
 			return _cachedSortedApps
 		}
@@ -121,13 +113,13 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 	}
 	
 	init(
-		sourceContexts: [SourceAppsView.SourceRepositoryContext],
+		sources: [ASRepository],
 		searchText: String,
 		sortOption: SourceAppsView.SortOption,
 		sortAscending: Bool,
 		onSelect: @escaping (SourceAppsView.SourceAppRoute) -> Void
 	) {
-		self.sourceContexts = sourceContexts
+		self.sources = sources
 		self.searchText = searchText
 		self.sortOption = sortOption
 		self.sortAscending = sortAscending
@@ -139,7 +131,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		}
 	}
 	
-	private func _calculateSortedApps() -> [SourceAppEntry] {
+	private func _calculateSortedApps() -> [(source: ASRepository, app: ASRepository.App)] {
 		let filtered = _allAppsWithSource.filter {
 			searchText.isEmpty ||
 			($0.app.id?.range(of: searchText, options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US")) != nil) ||
@@ -226,7 +218,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 	
 	func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
 		let cell = tableView.dequeueReusableCell(withIdentifier: "AppCell", for: indexPath)
-		let entry: SourceAppEntry
+		let entry: (source: ASRepository, app: ASRepository.App)
 		switch sortOption {
 		case .default: entry = _sortedApps[indexPath.row]
 		case .name: entry = _groupedAppsByNameFirstLetter[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
@@ -234,7 +226,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		}
 
 		cell.contentConfiguration = UIHostingConfiguration {
-			SourceAppsCellView(sourceURL: entry.sourceURL, source: entry.source, app: entry.app)
+			SourceAppsCellView(source: entry.source, app: entry.app)
 		}
 		return cell
 	}
@@ -243,14 +235,14 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		if #available(iOS 17, *) {
 			tableView.deselectRow(at: indexPath, animated: true)
 			
-			let entry: SourceAppEntry
+			let entry: (source: ASRepository, app: ASRepository.App)
 			switch sortOption {
 			case .default: entry = _sortedApps[indexPath.row]
 			case .name: entry = _groupedAppsByNameFirstLetter[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
 			case .date: entry = _groupedAppsByDate[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
 			}
 			
-			onSelect(SourceAppsView.SourceAppRoute(sourceURL: entry.sourceURL, source: entry.source, app: entry.app))
+			onSelect(SourceAppsView.SourceAppRoute(source: entry.source, app: entry.app))
 		}
 	}
 	
@@ -284,53 +276,15 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 	}
 	
 	func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
-		let entry: SourceAppEntry
-		switch sortOption {
-		case .default: entry = _sortedApps[indexPath.row]
-		case .name: entry = _groupedAppsByNameFirstLetter[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
-		case .date: entry = _groupedAppsByDate[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
-		}
-		
-		return UIContextMenuConfiguration(
-			identifier: nil,
-			previewProvider: nil
-		) { _ in
-			let versionsMenu = UIMenu(
-				title: .localized("Copy Download URLs"),
-				image: UIImage(systemName: "list.bullet"),
-				children: self._contextActions(for: entry.app, with: { _, url in
-					UIPasteboard.general.string = url?.absoluteString
-				}, image: UIImage(systemName: "doc.on.clipboard"))
-			)
-			
-			let downloadsMenu = UIMenu(
-				title: .localized("Previous Versions"),
-				image: UIImage(systemName: "square.and.arrow.down.on.square"),
-				children: self._contextActions(for: entry.app, with: { version, url in
-					if let url {
-						_ = DownloadManager.shared.startDownload(
-							from: url,
-							id: entry.app.currentUniqueId,
-							sourceProvenance: SourceAppProvenance(
-								sourceURL: entry.sourceURL,
-								repository: entry.source,
-								app: entry.app,
-								version: version
-							)
-						)
-					}
-				}, image: UIImage(systemName: "arrow.down"))
-			)
-			
-			return UIMenu(children: [downloadsMenu, versionsMenu])
-		}
+		// Modified: long-press menu (Previous Versions / Copy Download URLs) disabled.
+		nil
 	}
 	
 	// MARK: Actions
 	
 	private func _contextActions(
 		for app: ASRepository.App,
-		with action: @escaping (ASRepository.App.Version?, URL?) -> Void,
+		with action: @escaping (URL?) -> Void,
 		image: UIImage?
 	) -> [UIAction] {
 		if let versions = app.versions, !versions.isEmpty {
@@ -339,7 +293,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 					title: version.version,
 					image: image
 				) { _ in
-					action(version, version.downloadURL)
+					action(version.downloadURL)
 				}
 			}
 		} else {
@@ -348,15 +302,9 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 					title: app.currentVersion ?? "",
 					image: image
 				) { _ in
-					action(nil, app.currentDownloadUrl)
+					action(app.currentDownloadUrl)
 				}
 			]
 		}
 	}
 }}
-
-private struct SourceAppEntry {
-	let sourceURL: URL?
-	let source: ASRepository
-	let app: ASRepository.App
-}
