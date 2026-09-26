@@ -15,6 +15,11 @@ struct SourcesCellView: View {
 	
 	var source: AltSource
 	
+	/// The built-in Plus Store source can't be deleted.
+	private var _isBuiltIn: Bool {
+		source.identifier == Storage.plusSourceIdentifier
+	}
+	
 	// MARK: Body
 	var body: some View {
 		let isRegular = horizontalSizeClass != .compact
@@ -32,13 +37,17 @@ struct SourcesCellView: View {
 				: nil
 		)
 		.swipeActions {
-			_actions(for: source)
+			if !_isBuiltIn {
+				_actions(for: source)
+			}
 			_contextActions(for: source)
 		}
 		.contextMenu {
 			_contextActions(for: source)
-			Divider()
-			_actions(for: source)
+			if !_isBuiltIn {
+				Divider()
+				_actions(for: source)
+			}
 		}
 	}
 }
