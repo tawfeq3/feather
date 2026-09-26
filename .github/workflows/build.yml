@@ -1,0 +1,61 @@
+name: Build IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      cert_name:
+        description: "Certificate name (optional). Leave empty to build without a certificate"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.0.app
+
+      - name: Compile Feather (iOS only)
+        run: |
+          make iphoneos || (echo "Retrying once after Xcode failure..." && sleep 5 && make iphoneos)
+
+      - name: Embed certificate into the IPA (optional)
+        if: ${{ inputs.cert_name != '' }}
+        env:
+          CERT_NAME: ${{ inputs.cert_name }}
+        run: |
+          set -e
+          if ! [[ "$CERT_NAME" =~ ^[A-Za-z0-9_-]+$ ]]; then
+            echo "Certificate name may only contain letters, numbers, - and _"
+            exit 1
+          fi
+          for ext in p12 mobileprovision txt; do
+            if [ ! -f "certs/$CERT_NAME.$ext" ]; then
+              echo "Missing file: certs/$CERT_NAME.$ext"
+              exit 1
+            fi
+          done
+
+          rm -rf ipa_tmp && mkdir ipa_tmp
+          unzip -q packages/Feather.ipa -d ipa_tmp
+          DEST="ipa_tmp/Payload/Feather.app/signing-assets/$CERT_NAME"
+          mkdir -p "$DEST"
+          cp "certs/$CERT_NAME.p12" "$DEST/cert.p12"
+          cp "certs/$CERT_NAME.mobileprovision" "$DEST/cert.mobileprovision"
+          tr -d '\r\n' < "certs/$CERT_NAME.txt" > "$DEST/cert.txt"
+
+          rm packages/Feather.ipa
+          ditto -c -k --sequesterRsrc --keepParent ipa_tmp/Payload packages/Feather.ipa
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Feather-${{ inputs.cert_name || 'IPA' }}
+
+          path: packages/Feather.ipa
