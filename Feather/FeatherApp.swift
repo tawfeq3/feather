@@ -45,6 +45,8 @@ struct FeatherApp: App {
 				}
 				
 				UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "Feather.userTintColor") ?? "#848ef9"))
+				
+				Storage.shared.ensureDefaultSources()
 			}
 		}
 	}
@@ -126,15 +128,7 @@ struct FeatherApp: App {
 				let fullPath = url.validatedScheme(after: "/install/"),
 				let downloadURL = URL(string: fullPath)
 			{
-				UIAlertController.showAlertWithCancel(
-					title: .localized("Install"),
-					message: .localized("Do you want to download and install this file?") + "\n\n\(downloadURL)",
-					actions: [
-						UIAlertAction(title: .localized("Install"), style: .default) { _ in
-							_ = DownloadManager.shared.startDownload(from: downloadURL)
-						}
-					]
-				)
+				_ = DownloadManager.shared.startDownload(from: downloadURL)
 			}
 		} else {
 			if url.pathExtension == "ipa" || url.pathExtension == "tipa" {
