@@ -96,8 +96,24 @@ extension Storage {
 	}
 
 	func deleteSource(for source: AltSource) {
+		// the built-in Plus Store source can't be deleted
+		guard source.identifier != Storage.plusSourceIdentifier else { return }
 		context.delete(source)
 		saveContext()
+	}
+
+	/// Built-in source: added automatically (if missing) and can't be deleted.
+	static let plusSourceIdentifier = "com.plus.esign"
+	static let plusSourceURL = URL(string: "https://raw.githubusercontent.com/tawfeq3/Plus/main/app.json")!
+	
+	func ensureDefaultSources() {
+		addSource(
+			Storage.plusSourceURL,
+			name: "Plus Store",
+			identifier: Storage.plusSourceIdentifier,
+			iconURL: URL(string: "https://raw.githubusercontent.com/tawfeq3/Plus/main/icons/feather.png"),
+			completion: { _ in }
+		)
 	}
 
 	func sourceExists(_ identifier: String) -> Bool {
