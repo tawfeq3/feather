@@ -16,7 +16,7 @@
 			Section {
 				VStack(spacing: 14) {
 					_title()
-					Text(verbatim: "للأدوات المتفرقة")
+					Text(verbatim: "لأدوات تغير الموقع GPS")
 						.font(.body)
 						.foregroundStyle(.secondary)
 						.multilineTextAlignment(.center)
@@ -41,7 +41,7 @@
 					.font(.system(size: 38, weight: .bold))
 					.foregroundStyle(.tint)
 			
-				Text(verbatim: "متجر Plus")
+				Text(verbatim: "STORE Plus")
 					.font(.title)
 					.bold()
 			}
