@@ -34,10 +34,16 @@ struct SettingsView: View {
 	}
 
     
+	private let _storeWhatsAppUrl = "https://wa.me/966539329163"
+    
 	// MARK: Body
 	var body: some View {
 		NBNavigationView(.localized("Settings")) {
 			Form {
+				#if !NIGHTLY && !DEBUG
+					SettingsDonationCellView(site: _storeWhatsAppUrl)
+				#endif
+                
 				Section {
 					NavigationLink(destination: AppearanceView()) {
 						Label(.localized("Appearance"), systemImage: "paintbrush")
