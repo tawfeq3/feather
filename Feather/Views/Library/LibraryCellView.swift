@@ -157,7 +157,8 @@ extension LibraryCellView {
 					FRExpirationPillView(
 						title: .localized("Install"),
 						revoked: certRevoked,
-						expiration: certInfo
+						// Modified: always show "Install" instead of the certificate's remaining-days count.
+						expiration: nil
 					)
 				}
 			} else {
