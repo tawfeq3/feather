@@ -25,7 +25,7 @@
 					Button() {
 						UIApplication.open(site)
 					} label: {
-						_sheetButton("تواصل")
+						_sheetButton("لدعم والمساعدة")
 					}
 					.frame(height: 45)
 				}
