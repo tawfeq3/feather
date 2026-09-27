@@ -8,11 +8,13 @@
 import SwiftUI
 import NimbleExtensions
 import NimbleViews
+import UIKit.UIAlertController
 
 // MARK: - View
 struct LibraryCellView: View {
 	@Environment(\.horizontalSizeClass) private var horizontalSizeClass
 	@Environment(\.editMode) private var editMode
+	@State private var _isSigningDirectly = false
 
 	var certInfo: Date.ExpirationInfo? {
 		Storage.shared.getCertificate(from: app)?.expiration?.expirationInfo()
@@ -160,16 +162,63 @@ extension LibraryCellView {
 				}
 			} else {
 				Button {
-					selectedSigningAppPresenting = AnyApp(base: app)
+					_signDirectly(app)
 				} label: {
 					FRExpirationPillView(
-						title: .localized("Sign"),
+						title: _isSigningDirectly ? .localized("Signing...") : "بدء التوقيع",
 						revoked: false,
 						expiration: nil
 					)
 				}
+				.disabled(_isSigningDirectly)
 			}
 		}
 		.buttonStyle(.borderless)
+	}
+	
+	/// Modified: signs the app immediately using the last active certificate and
+	/// the saved default signing options, without opening the Signing screen.
+	private func _signDirectly(_ app: AppInfoPresentable) {
+		var options = OptionsManager.shared.options
+		let storedCertIndex = UserDefaults.standard.integer(forKey: "feather.selectedCert")
+		let certificate = Storage.shared.getCertificate(for: storedCertIndex)
+		
+		guard certificate != nil || options.signingOption != .default else {
+			UIAlertController.showAlertWithOk(
+				title: .localized("No Certificate"),
+				message: .localized("Please go to settings and import a valid certificate")
+			)
+			return
+		}
+		
+		if
+			options.ppqProtection,
+			let identifier = app.identifier,
+			certificate?.ppQCheck == true
+		{
+			options.appIdentifier = "\(identifier).\(options.ppqString)"
+		}
+		
+		_isSigningDirectly = true
+		
+		FR.signPackageFile(
+			app,
+			using: options,
+			icon: nil,
+			certificate: certificate
+		) { error in
+			_isSigningDirectly = false
+			
+			if let error {
+				UIAlertController.showAlertWithOk(
+					title: .localized("Error"),
+					message: error.localizedDescription
+				)
+			} else if options.post_installAppAfterSigned {
+				DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+					NotificationCenter.default.post(name: Notification.Name("Feather.installApp"), object: nil)
+				}
+			}
+		}
 	}
 }
