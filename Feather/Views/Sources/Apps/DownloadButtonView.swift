@@ -50,7 +50,7 @@ struct DownloadButtonView: View {
 						)
 					}
 				} label: {
-					Text(.localized("Get"))
+					Text(verbatim: "تنزيل")
 						.lineLimit(0)
 						.font(.headline.bold())
 						.foregroundStyle(Color.accentColor)
