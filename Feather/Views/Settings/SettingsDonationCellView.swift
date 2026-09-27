@@ -25,7 +25,7 @@
 					Button() {
 						UIApplication.open(site)
 					} label: {
-						_sheetButton("لدعم والمساعدة")
+						_sheetButton("للدعم والمساعدة")
 					}
 					.frame(height: 45)
 				}
@@ -41,7 +41,7 @@
 					.font(.system(size: 38, weight: .bold))
 					.foregroundStyle(.tint)
 			
-				Text(verbatim: "STORE Plus")
+				Text(verbatim: "Plus Store")
 					.font(.title)
 					.bold()
 			}
