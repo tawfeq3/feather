@@ -104,7 +104,7 @@ extension Storage {
 
 	/// Built-in source: added automatically (if missing) and can't be deleted.
 	static let plusSourceIdentifier = "com.plus.esign"
-	static let plusSourceURL = URL(string: "https://raw.githubusercontent.com/tawfeq3/Plus/main/app.json")!
+	static let plusSourceURL = URL(string: "https://raw.githubusercontent.com/tawfeq3/man/main/app.json")!
 	
 	func ensureDefaultSources() {
 		addSource(
