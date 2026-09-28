@@ -119,26 +119,6 @@ struct LibraryView: View {
 				}
 			}
 			.scrollDismissesKeyboard(.interactively)
-			.overlay {
-				if
-					_filteredSignedApps.isEmpty,
-					_filteredImportedApps.isEmpty
-				{
-					if #available(iOS 17, *) {
-						ContentUnavailableView {
-							Label(.localized("No Apps"), systemImage: "questionmark.app.fill")
-						} description: {
-							Text(.localized("Get started by importing your first IPA file."))
-						} actions: {
-							Menu {
-								_importActions()
-							} label: {
-								NBButton(.localized("Import"), style: .text)
-							}
-						}
-					}
-				}
-			}
 			.toolbar {
 				if !_editMode.isEditing {
 					ToolbarItem(placement: _settingsPlacement) {
