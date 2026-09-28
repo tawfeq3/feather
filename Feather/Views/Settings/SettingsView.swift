@@ -51,7 +51,6 @@ struct SettingsView: View {
 				}
                 
 				NBSection(.localized("Certificates")) {
-                    
 					if let cert = selectedCertificate {
 						CertificatesCellView(cert: cert)
 					} else {
@@ -59,12 +58,6 @@ struct SettingsView: View {
 							.font(.footnote)
 							.foregroundColor(.disabled())
 					}
-					NavigationLink(destination: CertificatesView()) {
-						Label(.localized("Certificates"), systemImage: "checkmark.seal")
-					}
-                 
-				} footer: {
-					Text(.localized("Add and manage certificates used for signing applications."))
 				}
 			}
 			.toolbar {
