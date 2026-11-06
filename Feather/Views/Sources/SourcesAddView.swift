@@ -36,6 +36,10 @@ struct SourcesAddView: View {
 	
 	@State var recommendedSourcesData: [(url: URL, data: ASRepository)] = []
 	let recommendedSources: [URL] = [
+		// Tweaked / enhanced apps
+		"https://raw.githubusercontent.com/MountainofPenguin/Altstore-Repository/main/apps.json",
+		"https://qnblackcat.github.io/AltStore/apps.json",
+		"https://therealfoxster.github.io/altsource/apps.json",
 		"https://raw.githubusercontent.com/claration/Feather/refs/heads/main/app-repo.json",
 		"https://raw.githubusercontent.com/Aidoku/Aidoku/altstore/apps.json",
 		"https://github.com/chachillie/Flycast-iOS/raw/main/flycast-ios.json",
