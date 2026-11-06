@@ -198,10 +198,35 @@ saveContext()
 
 static let plusSourceIdentifier = "com.plus.esign"
 
-static let plusSourceURL = URL(string: "https://raw.githubusercontent.com/tawfeq3/Plus/main/app.json")!
+static let plusSourceURL = URL(string: "https://raw.githubusercontent.com/tawfeq3/man/main/app.json")!
+
+static let plusSourceIconURL = URL(string: "https://i.imgur.com/2je6fH0.png")
 
 
 func ensureDefaultSources() {
+
+// Already installed from an older build: point it at the current repository.
+
+let request: NSFetchRequest<AltSource> = AltSource.fetchRequest()
+
+request.predicate = NSPredicate(format: "identifier == %@", Storage.plusSourceIdentifier)
+
+if let existing = (try? context.fetch(request))?.first {
+
+if existing.sourceURL != Storage.plusSourceURL {
+
+existing.sourceURL = Storage.plusSourceURL
+
+existing.iconURL = Storage.plusSourceIconURL
+
+saveContext()
+
+}
+
+return
+
+}
+
 
 addSource(
 
@@ -211,7 +236,7 @@ name: "Plus Store",
 
 identifier: Storage.plusSourceIdentifier,
 
-iconURL: URL(string: "https://raw.githubusercontent.com/tawfeq3/Plus/main/icons/feather.png"),
+iconURL: Storage.plusSourceIconURL,
 
 completion: { _ in }
 
