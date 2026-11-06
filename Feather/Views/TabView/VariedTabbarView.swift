@@ -9,12 +9,16 @@ import SwiftUI
 import CoreData
 import NimbleViews
 
-/// Modified: two tabs only.
+/// Modified: three tabs.
 /// - Library: downloaded / imported / signed apps (Settings is the gear button in its toolbar)
-/// - Apps: every app from the built-in source (Sources is hidden from Settings; nobody can add/edit/remove sources from the UI)
+/// - Apps: ONLY the apps of the built-in source (Plus Store)
+/// - Sources: every other source the user adds (never includes the built-in source)
 struct VariedTabbarView: View {
+	/// Name of the extra tab. Change it here to rename the tab.
+	private let _otherSourcesTitle = "المصادر"
+
 	init() {}
-	
+
 	var body: some View {
 		TabView {
 			LibraryView()
@@ -30,12 +34,21 @@ struct VariedTabbarView: View {
 						Image(systemName: "arrow.down.app")
 					}
 				}
+
+			SourcesView(title: _otherSourcesTitle)
+				.tabItem {
+					Label {
+						Text(verbatim: _otherSourcesTitle)
+					} icon: {
+						Image(systemName: "globe.desk")
+					}
+				}
 		}
 	}
 }
 
 // MARK: - Apps tab
-/// Shows the apps of all added sources in one list (same list as "All Repositories").
+/// Shows the apps of the built-in source only (apps from other sources live in the Sources tab).
 /// Tapping an app opens its page; "Get" downloads it into the Library.
 struct AppsTabView: View {
 	@StateObject private var _viewModel = SourcesViewModel.shared
@@ -46,6 +59,7 @@ struct AppsTabView: View {
 	@FetchRequest(
 		entity: AltSource.entity(),
 		sortDescriptors: [NSSortDescriptor(keyPath: \AltSource.name, ascending: true)],
+		predicate: NSPredicate(format: "identifier == %@", Storage.plusSourceIdentifier),
 		animation: .snappy
 	) private var _sources: FetchedResults<AltSource>
 	
