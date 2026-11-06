@@ -15,7 +15,7 @@ import NimbleViews
 /// - Sources: every other source the user adds (never includes the built-in source)
 struct VariedTabbarView: View {
 	/// Name of the extra tab. Change it here to rename the tab.
-	private let _otherSourcesTitle = "المصادر"
+	private let _otherSourcesTitle = "إضافات"
 
 	init() {}
 
