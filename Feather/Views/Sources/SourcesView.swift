@@ -15,12 +15,16 @@ struct SourcesView: View {
 	@Environment(\.horizontalSizeClass) private var horizontalSizeClass
 	/// true when pushed inside Settings (no own NavigationStack)
 	let embedded: Bool
-	
-	init(embedded: Bool = false) {
+	let title: String
+
+	init(embedded: Bool = false, title: String = .localized("Sources")) {
 		self.embedded = embedded
+		self.title = title
 	}
-	
-	@StateObject var viewModel = SourcesViewModel.shared
+
+	/// Own instance (not .shared): the Apps tab uses the shared one, and
+	/// a fetch in one would wipe the loaded sources of the other.
+	@StateObject var viewModel = SourcesViewModel()
 	@State private var _isAddingPresenting = false
 	@State private var _addingSourceLoading = false
 	@State private var _searchText = ""
@@ -32,6 +36,8 @@ struct SourcesView: View {
 	@FetchRequest(
 		entity: AltSource.entity(),
 		sortDescriptors: [NSSortDescriptor(keyPath: \AltSource.name, ascending: true)],
+		// the built-in source (Plus Store) never shows up here, only in the Apps tab
+		predicate: NSPredicate(format: "identifier != %@", Storage.plusSourceIdentifier),
 		animation: .snappy
 	) private var _sources: FetchedResults<AltSource>
 	
@@ -40,9 +46,9 @@ struct SourcesView: View {
 		Group {
 			if embedded {
 				_content
-					.navigationTitle(String.localized("Sources"))
+					.navigationTitle(title)
 			} else {
-				NBNavigationView(.localized("Sources")) {
+				NBNavigationView(title) {
 					_content
 				}
 			}
