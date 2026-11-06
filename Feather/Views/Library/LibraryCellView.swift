@@ -10,11 +10,27 @@ import NimbleExtensions
 import NimbleViews
 import UIKit.UIAlertController
 
+// Modified: default installation server type = Semi Local (index 1 in Settings > Installation).
+// Registered once; it never overrides a value the user already chose on this device.
+private enum PlusInstallDefaults {
+	static let registered: Bool = {
+		UserDefaults.standard.register(defaults: ["Feather.serverMethod": 1])
+		return true
+	}()
+}
+
 // MARK: - View
 struct LibraryCellView: View {
 	@Environment(\.horizontalSizeClass) private var horizontalSizeClass
 	@Environment(\.editMode) private var editMode
 	@State private var _isSigningDirectly = false
+	
+	// Same certificate list/order that SigningView uses
+	@FetchRequest(
+		entity: CertificatePair.entity(),
+		sortDescriptors: [NSSortDescriptor(keyPath: \CertificatePair.date, ascending: false)],
+		animation: .snappy
+	) private var _certificates: FetchedResults<CertificatePair>
 
 	var certInfo: Date.ExpirationInfo? {
 		Storage.shared.getCertificate(from: app)?.expiration?.expirationInfo()
@@ -49,6 +65,7 @@ struct LibraryCellView: View {
 	var body: some View {
 		let isRegular = horizontalSizeClass != .compact
 		let isEditing = editMode?.wrappedValue == .active
+		let _ = PlusInstallDefaults.registered
 		
 		HStack(spacing: 18) {
 			if isEditing {
@@ -177,12 +194,18 @@ extension LibraryCellView {
 		.buttonStyle(.borderless)
 	}
 	
-	/// Modified: signs the app immediately using the last active certificate and
-	/// the saved default signing options, without opening the Signing screen.
+	/// The certificate currently selected in Settings (same lookup SigningView uses).
+	private func _selectedCertificate() -> CertificatePair? {
+		let index = UserDefaults.standard.integer(forKey: "feather.selectedCert")
+		guard _certificates.indices.contains(index) else { return nil }
+		return _certificates[index]
+	}
+	
+	/// Modified: signs the app immediately using the last active certificate and the saved
+	/// signing options, without opening the Signing screen. Mirrors SigningView's _start().
 	private func _signDirectly(_ app: AppInfoPresentable) {
 		var options = OptionsManager.shared.options
-		let storedCertIndex = UserDefaults.standard.integer(forKey: "feather.selectedCert")
-		let certificate = Storage.shared.getCertificate(for: storedCertIndex)
+		let certificate = _selectedCertificate()
 		
 		guard certificate != nil || options.signingOption != .default else {
 			UIAlertController.showAlertWithOk(
@@ -192,6 +215,7 @@ extension LibraryCellView {
 			return
 		}
 		
+		// ppq protection
 		if
 			options.ppqProtection,
 			let identifier = app.identifier,
@@ -200,11 +224,27 @@ extension LibraryCellView {
 			options.appIdentifier = "\(identifier).\(options.ppqString)"
 		}
 		
+		// saved identifier / display name rules
+		if
+			let currentBundleId = app.identifier,
+			let newBundleId = options.identifiers[currentBundleId]
+		{
+			options.appIdentifier = newBundleId
+		}
+		
+		if
+			let currentName = app.name,
+			let newName = options.displayNames[currentName]
+		{
+			options.appName = newName
+		}
+		
+		let finalOptions = options
 		_isSigningDirectly = true
 		
 		FR.signPackageFile(
 			app,
-			using: options,
+			using: finalOptions,
 			icon: nil,
 			certificate: certificate
 		) { error in
@@ -215,7 +255,17 @@ extension LibraryCellView {
 					title: .localized("Error"),
 					message: error.localizedDescription
 				)
-			} else if options.post_installAppAfterSigned {
+				return
+			}
+			
+			if
+				finalOptions.post_deleteAppAfterSigned,
+				!app.isSigned
+			{
+				Storage.shared.deleteApp(for: app)
+			}
+			
+			if finalOptions.post_installAppAfterSigned {
 				DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
 					NotificationCenter.default.post(name: Notification.Name("Feather.installApp"), object: nil)
 				}
