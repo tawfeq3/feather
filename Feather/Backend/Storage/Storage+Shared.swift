@@ -34,6 +34,54 @@ extension Storage {
 		}
 	}
 	
+	/// Modified: duplicates an app inside the Library (its files + a new database entry with a new UUID).
+	/// The copy lands in the same section (Signed / Imported) as the original.
+	func cloneApp(for app: AppInfoPresentable, completion: @escaping (Error?) -> Void) {
+		guard let sourceDirectory = getUuidDirectory(for: app) else {
+			completion(CocoaError(.fileNoSuchFile))
+			return
+		}
+
+		let newUUID = UUID().uuidString
+		let destination = app.isSigned
+			? FileManager.default.signed(newUUID)
+			: FileManager.default.unsigned(newUUID)
+
+		do {
+			try FileManager.default.createDirectory(
+				at: destination.deletingLastPathComponent(),
+				withIntermediateDirectories: true
+			)
+			try FileManager.default.copyItem(at: sourceDirectory, to: destination)
+		} catch {
+			completion(error)
+			return
+		}
+
+		if let signed = app as? Signed {
+			addSigned(
+				uuid: newUUID,
+				source: signed.source,
+				certificate: signed.certificate,
+				appName: signed.name,
+				appIdentifier: signed.identifier,
+				appVersion: signed.version,
+				appIcon: signed.icon,
+				completion: completion
+			)
+		} else {
+			addImported(
+				uuid: newUUID,
+				source: app.source,
+				appName: app.name,
+				appIdentifier: app.identifier,
+				appVersion: app.version,
+				appIcon: app.icon,
+				completion: completion
+			)
+		}
+	}
+
 	func getCertificate(from app: AppInfoPresentable) -> CertificatePair? {
 		if let signed = app as? Signed {
 			return signed.certificate
