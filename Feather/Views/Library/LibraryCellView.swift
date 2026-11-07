@@ -109,6 +109,15 @@ struct LibraryCellView: View {
 				_actions(for: app)
 			}
 		}
+		.contextMenu {
+			if !isEditing {
+				_contextActions(for: app)
+				_contextActionsExtra(for: app)
+				_cloneAction(for: app)
+				Divider()
+				_actions(for: app)
+			}
+		}
 	}
 	
 	private var _desc: String {
@@ -164,6 +173,21 @@ extension LibraryCellView {
 		}
 	}
 	
+	/// Modified: duplicates the app in the Library.
+	@ViewBuilder
+	private func _cloneAction(for app: AppInfoPresentable) -> some View {
+		Button("Clone App", systemImage: "plus.square.on.square") {
+			Storage.shared.cloneApp(for: app) { error in
+				if let error {
+					UIAlertController.showAlertWithOk(
+						title: .localized("Error"),
+						message: error.localizedDescription
+					)
+				}
+			}
+		}
+	}
+
 	@ViewBuilder
 	private func _buttonActions(for app: AppInfoPresentable) -> some View {
 		Group {
