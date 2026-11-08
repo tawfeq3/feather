@@ -173,10 +173,10 @@ extension LibraryCellView {
 		}
 	}
 	
-	/// Modified: duplicates the app in the Library.
+	/// Modified: duplicates the app in the Library (new bundle identifier for the copy).
 	@ViewBuilder
 	private func _cloneAction(for app: AppInfoPresentable) -> some View {
-		Button("Clone App", systemImage: "plus.square.on.square") {
+		Button("تكرار التطبيق", systemImage: "plus.square.on.square") {
 			Storage.shared.cloneApp(for: app) { error in
 				if let error {
 					UIAlertController.showAlertWithOk(
